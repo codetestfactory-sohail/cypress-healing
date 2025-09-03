@@ -1,0 +1,40 @@
+name: Release & Publish
+
+on:
+  push:
+    tags:
+      - "v*"   # runs when you push tags like v1.0.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: https://registry.npmjs.org/
+
+      # Install dependencies (no lockfile issue now)
+      - name: Install dependencies
+        run: npm install
+
+      # Build package (if you have a build step)
+      - name: Build
+        run: npm run build --if-present
+
+      # Run tests before publishing
+      - name: Run tests
+        run: npm test --if-present
+
+      # Publish to npm
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
