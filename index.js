@@ -1,4 +1,4 @@
 module.exports = {
-  plugin: require('./plugin'),
-  commands: require('./commands')
+  plugin: require('./src/plugin'),
+  commands: require('./src/commands')
 };
