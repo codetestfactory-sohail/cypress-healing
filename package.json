@@ -2,10 +2,11 @@
   "name": "cypress-healing",
   "version": "0.1.0",
   "description": "Self-healing locators and smart waits for Cypress",
-  "main": "src/index.js",
+  "main": "index.js",
   "types": "index.d.ts",
   "license": "MIT",
   "files": [
+    "index.js",
     "src",
     "index.d.ts",
     "README.md",
@@ -15,5 +16,6 @@
   "scripts": {
     "test": "echo \"(add tests)\" && exit 0"
   },
-  "keywords": ["cypress", "self-healing", "selectors", "testing", "automation"]
+  "author": "Sohail Mohammed (sohailcode.com)",
+  "keywords": ["cypress", "healing", "self-healing", "selectors", "locators", "testing", "automation"]
 }
