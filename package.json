@@ -1,0 +1,19 @@
+{
+  "name": "cypress-healing",
+  "version": "0.1.0",
+  "description": "Self-healing locators and smart waits for Cypress",
+  "main": "src/index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "files": [
+    "src",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "test": "echo \"(add tests)\" && exit 0"
+  },
+  "keywords": ["cypress", "self-healing", "selectors", "testing", "automation"]
+}
