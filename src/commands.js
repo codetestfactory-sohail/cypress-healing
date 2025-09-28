@@ -43,3 +43,6 @@ Cypress.Commands.add('getLoc', (selector, options) => {
     throw new Error(`❌ No healing strategy worked for ${selector}`);
   });
 });
+
+
+module.exports = { waitFor: Cypress.Commands.waitFor, getLoc: Cypress.Commands.getLoc };
