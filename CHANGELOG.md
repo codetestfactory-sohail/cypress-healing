@@ -9,6 +9,21 @@ All notable changes to cypress-healing will be documented in this file.
 - Creates cohesive "smart" command family with `cy.smartWait()`
 - All functionality remains the same, only the name has changed
 
+### 🔒 Security Fixes
+- **FIXED**: Incomplete string escaping vulnerability in `containsExcludedPattern()`
+  - Now uses global regex replacement instead of single `.replace()`
+  - Properly removes all occurrences of `^`, `$`, and `-` characters
+- **FIXED**: Missing backslash escaping in `escapeText()`
+  - Now properly escapes backslashes before other special characters
+  - Added escaping for newlines, tabs, and carriage returns
+- **ADDED**: New security functions
+  - `escapeCSSSelector()`: Properly escapes CSS selector special characters
+  - `escapeAttributeValue()`: Safely escapes attribute values
+- **IMPROVED**: All selector generation now uses proper escaping
+  - Prevents CSS injection attacks
+  - Handles special characters safely
+  - Protects against XSS attempts through selector manipulation
+
 ## [0.2.0] - 2025-09-28
 
 ### 🎆 Major Release - AI-Powered Healing & Cypress 14+ Compatibility

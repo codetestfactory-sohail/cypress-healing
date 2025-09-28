@@ -41,13 +41,13 @@ function byDataAttr(root: Document, opts: HealOptions): string | null {
   const dataCyElement = root.querySelector("[data-cy]");
   if (dataCyElement) {
     const attr = dataCyElement.getAttribute("data-cy");
-    if (attr) return `[data-cy="${attr}"]`;
+    if (attr) return `[data-cy="${escapeAttributeValue(attr)}"]`;
   }
 
   const dataTestIdElement = root.querySelector("[data-testid]");
   if (dataTestIdElement) {
     const attr = dataTestIdElement.getAttribute("data-testid");
-    if (attr) return `[data-testid="${attr}"]`;
+    if (attr) return `[data-testid="${escapeAttributeValue(attr)}"]`;
   }
 
   return null;
@@ -58,7 +58,7 @@ function byAria(root: Document, opts: HealOptions): string | null {
   for (const el of Array.from(elements)) {
     const attr = el.getAttribute("aria-label");
     if (attr && !isExcludedPattern(attr, opts.excludePatterns)) {
-      return `[aria-label="${attr}"]`;
+      return `[aria-label="${escapeAttributeValue(attr)}"]`;
     }
   }
   return null;
@@ -73,10 +73,10 @@ function byRole(root: Document, opts: HealOptions): string | null {
       if (attr === "button" || attr === "link") {
         const text = el.textContent?.trim();
         if (text && isValidTextLength(text, opts)) {
-          return `[role="${attr}"]:contains("${text}")`;
+          return `[role="${escapeAttributeValue(attr)}"]:contains("${escapeText(text)}")`;
         }
       }
-      return `[role="${attr}"]`;
+      return `[role="${escapeAttributeValue(attr)}"]`;
     }
   }
   return null;
@@ -87,7 +87,7 @@ function byLabel(root: Document, opts: HealOptions): string | null {
   for (const label of Array.from(labels)) {
     const forAttr = label.getAttribute("for");
     if (forAttr && !isExcludedPattern(forAttr, opts.excludePatterns)) {
-      return `#${forAttr}`;
+      return `#${escapeCSSSelector(forAttr)}`;
     }
   }
   return null;
@@ -120,15 +120,16 @@ function byClass(root: Document, opts: HealOptions): string | null {
     const stableClass = classes.find(c => !isExcludedPattern(c, opts.excludePatterns));
     
     if (stableClass) {
+      const escapedClass = escapeCSSSelector(stableClass);
       // If it's a unique class, use it directly
-      const count = root.querySelectorAll(`.${stableClass}`).length;
+      const count = root.querySelectorAll(`.${escapedClass}`).length;
       if (count === 1) {
-        return `.${stableClass}`;
+        return `.${escapedClass}`;
       }
       
       // Otherwise, try to combine with tag name for more specificity
       const tagName = el.tagName.toLowerCase();
-      return `${tagName}.${stableClass}`;
+      return `${tagName}.${escapedClass}`;
     }
   }
   return null;
@@ -140,7 +141,7 @@ function byId(root: Document, opts: HealOptions): string | null {
   for (const el of Array.from(elements)) {
     const id = el.getAttribute("id");
     if (id && !isExcludedPattern(id, opts.excludePatterns)) {
-      return `#${id}`;
+      return `#${escapeCSSSelector(id)}`;
     }
   }
   return null;
@@ -155,7 +156,14 @@ function isExcludedPattern(value: string, patterns?: string[]): boolean {
 
 function containsExcludedPattern(value: string, patterns?: string[]): boolean {
   if (!patterns || patterns.length === 0) return false;
-  return patterns.some(pattern => value.includes(pattern.replace('^', '').replace('$', '').replace('-', '')));
+  return patterns.some(pattern => {
+    // Use replaceAll or global regex to replace all occurrences
+    const cleanPattern = pattern
+      .replace(/\^/g, '')  // Remove all ^ anchors
+      .replace(/\$/g, '')  // Remove all $ anchors
+      .replace(/-/g, '');   // Remove all hyphens
+    return value.includes(cleanPattern);
+  });
 }
 
 function isValidTextLength(text: string, opts: HealOptions): boolean {
@@ -165,8 +173,33 @@ function isValidTextLength(text: string, opts: HealOptions): boolean {
 }
 
 function escapeText(text: string): string {
-  // Escape special characters for jQuery selectors
-  return text.replace(/"/g, '\\"').replace(/'/g, "\\'");
+  // Escape special characters for jQuery :contains() selectors
+  // First escape backslashes, then quotes
+  return text
+    .replace(/\\/g, '\\\\')  // Escape backslashes first
+    .replace(/"/g, '\\"')    // Escape double quotes
+    .replace(/'/g, "\\'")     // Escape single quotes
+    .replace(/\n/g, '\\n')    // Escape newlines
+    .replace(/\r/g, '\\r')    // Escape carriage returns
+    .replace(/\t/g, '\\t');   // Escape tabs
+}
+
+function escapeCSSSelector(str: string): string {
+  // Escape special CSS selector characters
+  // Based on CSS.escape() polyfill
+  if (!str) return str;
+  
+  return str.replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+}
+
+function escapeAttributeValue(value: string): string {
+  // Escape attribute values for use in CSS selectors
+  if (!value) return value;
+  
+  // Escape quotes and backslashes
+  return value
+    .replace(/\\/g, '\\\\')  // Escape backslashes
+    .replace(/"/g, '\\"');   // Escape double quotes
 }
 
 // --- Core Healing Function ---
@@ -254,34 +287,34 @@ export function generateSmartSelector(element: Element, options: Partial<HealOpt
   
   // Check for data attributes
   const dataCy = element.getAttribute('data-cy');
-  if (dataCy) return `[data-cy="${dataCy}"]`;
+  if (dataCy) return `[data-cy="${escapeAttributeValue(dataCy)}"]`;
   
   const dataTestId = element.getAttribute('data-testid');
-  if (dataTestId) return `[data-testid="${dataTestId}"]`;
+  if (dataTestId) return `[data-testid="${escapeAttributeValue(dataTestId)}"]`;
   
   // Check for aria-label
   const ariaLabel = element.getAttribute('aria-label');
   if (ariaLabel && !isExcludedPattern(ariaLabel, opts.excludePatterns)) {
-    return `[aria-label="${ariaLabel}"]`;
+    return `[aria-label="${escapeAttributeValue(ariaLabel)}"]`;
   }
   
   // Check for role
   const role = element.getAttribute('role');
   if (role && !isExcludedPattern(role, opts.excludePatterns)) {
-    return `[role="${role}"]`;
+    return `[role="${escapeAttributeValue(role)}"]`;
   }
   
   // Check for id
   const id = element.getAttribute('id');
   if (id && !isExcludedPattern(id, opts.excludePatterns)) {
-    return `#${id}`;
+    return `#${escapeCSSSelector(id)}`;
   }
   
   // Check for stable class
   const classes = element.className.split(' ').filter(c => c.length > 0);
   const stableClass = classes.find(c => !isExcludedPattern(c, opts.excludePatterns));
   if (stableClass) {
-    return `.${stableClass}`;
+    return `.${escapeCSSSelector(stableClass)}`;
   }
   
   // Fall back to text content for buttons and links
