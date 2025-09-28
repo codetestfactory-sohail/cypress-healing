@@ -7,35 +7,49 @@
 [![Allure Plugin](https://img.shields.io/badge/Reporter-Allure-EF4056.svg)](https://www.npmjs.com/package/@shelex/cypress-allure-plugin)
 [![Cypress Cloud](https://img.shields.io/badge/Cypress%20Cloud-Recorded-00bcd4)](https://docs.cypress.io/guides/cloud/introduction)
 
-Self‑healing Cypress locators and intent‑aware smart waits with structured logging that surfaces in Mochawesome, Allure, and the Cypress Cloud Dashboard (when enabled), plus a dedicated HTML report and a machine‑readable JSON map of healed selectors.
+🩹 **AI-powered self-healing locators** and **smart waits** for Cypress with **heuristic and AI-based selector healing**. Features intelligent fallback strategies, multiple AI provider support (OpenAI, Gemini, Copilot), and comprehensive healing reports.
 
 ---
 
 ## Table of Contents
-- Features
-- Requirements
-- Installation
-- Quick Start
-  - Configure the plugin
-  - Register commands
-- Usage
-  - cy.waitFor (self-healing)
-  - cy.getLoc (self‑healing)
-- Reporting
-- Configuration (advanced)
-- TypeScript
-- CI/CD
-- Contributing
-- Security
-- License
+- [What's New in v0.2.0](#whats-new-in-v020)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Commands](#commands)
+  - [cy.smartWait](#cysmartwaittarget-options) (replaces waitFor)
+  - [cy.smartGet](#cysmartget-selector-options) (Smart healing + AI)
+  - [cy.getLoc](#cygetlocselector-fallbackselectors) (Auto healing without AI)
+- [Healing Strategies](#healing-strategies)
+- [AI Configuration](#ai-configuration)
+- [Reporting](#reporting)
+- [Migration Guide](#migration-guide)
+- [TypeScript](#typescript)
+- [License](#license)
 
 ---
 
+## What's New in v0.2.0
+
+### 🎆 Major Updates
+- **⚠️ BREAKING**: Renamed `cy.waitFor()` to `cy.smartWait()` to avoid conflicts with Cypress 14+
+- **🤖 NEW**: AI-powered healing with support for OpenAI, Google Gemini, Cursor, Warp, and GitHub Copilot
+- **🎯 NEW**: `cy.smartGet()` command with intelligent heuristic auto-healing
+- **📦 NEW**: Full TypeScript support with proper type definitions
+- **⚙️ NEW**: Configurable healing strategies and priorities
+- **📊 IMPROVED**: Enhanced HTML reports with healing statistics
+
 ## Features
-- Self-healing robust waits with `cy.waitFor()` for selectors, aliases, or fixed delays along with logging.
-- Self‑healing `cy.getLoc()` that attempts alternative selectors when a locator breaks.
-- JSON record of healed selectors and an HTML healing report.
-- Minimal setup: one plugin and one support import.
+
+- **🤖 AI-Powered Healing**: Integrate with OpenAI, Google Gemini, Cursor, Warp, and GitHub Copilot for intelligent selector healing
+- **🎯 Heuristic Auto-Healing**: Smart fallback strategies using data attributes, ARIA labels, roles, text content, and more
+- **⏳ Smart Wait Command**: `cy.smartWait()` replaces `waitFor` to avoid conflicts with Cypress 14+
+- **🔄 Multiple Healing Strategies**: Combines heuristic, AI, and manual healing approaches
+- **📊 Detailed Reports**: Generate HTML reports showing all healed selectors and their methods
+- **⚙️ Highly Configurable**: Customize healing priorities, AI providers, and heuristic patterns
+- **📝 TypeScript Support**: Full TypeScript support with type definitions
+- **🚀 Zero-Config Option**: Works out of the box with sensible defaults
 
 ## Requirements
 - Cypress installed in your project.
@@ -52,30 +66,17 @@ yarn add --dev cypress-healing
 ## Quick Start
 
 ### 1) Configure the plugin (cypress.config.js)
-Register the plugin so healing data can be loaded before a run and the HTML report can be generated after the run.
+Register the plugin for enhanced healing capabilities and reporting.
 
-```js path=null start=null
+```javascript
 const { defineConfig } = require('cypress');
-const healingPlugin = require('cypress-healing/plugin');
+const { registerHealingPlugin } = require('cypress-healing');
 
 module.exports = defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
-      // Register the healing plugin hooks
-      healingPlugin(on, config);
-
-      // Optional: set runtime configuration for healing
-      // These values are read via Cypress.env('healingConfig') at test time
-      config.env = config.env || {};
-      config.env.healingConfig = {
-        // Where to save healed selectors (JSON)
-        healFile: 'cypress/healed-selectors.json',
-        // Where to generate the HTML report
-        reportFile: 'cypress/healing-report.html'
-        // strategies: [fn(selector) => newSelector, ...] // Advanced; see Configuration
-      };
-
-      return config;
+      // Register the healing plugin with enhanced features
+      return registerHealingPlugin(on, config);
     },
   },
 });
@@ -83,60 +84,259 @@ module.exports = defineConfig({
 
 ### 2) Register commands (cypress/support/e2e.js)
 
-```js path=null start=null
-// or cypress/support/e2e.ts
-import 'cypress-healing/commands';
+```javascript
+// cypress/support/e2e.js or e2e.ts
+import 'cypress-healing';
+```
+
+### 3) Configure healing strategies (optional)
+
+Create `src/config/healing.config.json` for advanced configuration:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "copilot",
+    "providers": {
+      "openai": { "apiKey": "", "model": "gpt-4" },
+      "gemini": { "apiKey": "", "model": "gemini-pro" }
+    }
+  },
+  "heuristics": {
+    "priority": ["data-cy", "data-testid", "aria-label", "role", "text"],
+    "excludePatterns": ["^ember-", "^react-", "^[0-9]+$"]
+  }
+}
 ```
 
 ---
 
-## Usage
+## Commands
 
-### cy.waitFor(target, options?)
+### cy.smartWait(target, options?)
+**🆕 Replaces `cy.waitFor()` to avoid Cypress 14+ conflicts**
+
 Smart waits for selectors, route aliases, or a fixed delay.
 
-```js path=null start=null
-// Wait for a selector to appear (auto-detects action)
-cy.waitFor('#spinner');
+```javascript
+// Wait for element to appear
+cy.smartWait('#loading-spinner');
 
-// Explicitly wait for a selector to disappear
-cy.waitFor('#spinner', { action: 'disappear', timeout: 15000 });
+// Wait for element to disappear
+cy.smartWait('.modal', { action: 'disappear', timeout: 5000 });
 
-// Wait for a selector to appear with a custom log message
-cy.waitFor('.toast-message', { action: 'appear', message: 'Waiting for toast' });
+// Wait for API response
+cy.intercept('GET', '/api/data').as('getData');
+cy.smartWait('@getData');
 
-// Wait for a network alias
-cy.waitFor('@getUser');
-
-// Wait for a fixed number of milliseconds
-cy.waitFor(500);
+// Simple delay
+cy.smartWait(1000);
 ```
 
-Options:
-- timeout: number (default 10000)
-- message: string (for logging)
-- action: 'appear' | 'disappear' (auto‑detected if omitted)
+**Options:**
+- `timeout`: number (default 10000)
+- `message`: string (custom log message)
+- `action`: 'appear' | 'disappear' (auto-detected if omitted)
 
-### cy.getLoc(selector, options?)
-A drop‑in replacement for `cy.get()` that will try to heal broken selectors using simple strategies and record the result.
+### cy.smartGet(selector, options?)
+**🆕 NEW - Smart selector with intelligent auto-healing and AI support**
 
-```js path=null start=null
-// Use like cy.get(), but with self‑healing
-cy.getLoc('button.submit').click();
+Automatically heals broken selectors using heuristics and AI.
+
+```javascript
+// Basic usage - will auto-heal if selector breaks
+cy.smartGet('.submit-button').click();
+
+// With custom healing options
+cy.smartGet('#dynamic-id', {
+  priority: ['data-cy', 'aria-label', 'text'],
+  excludePatterns: ['^[0-9]+$'],
+  logging: true
+}).type('Hello World');
+
+// Heals form elements
+cy.smartGet('input[name=email]').type('user@example.com');
+cy.smartGet('button[type=submit]').click();
 ```
 
-What happens when a locator breaks:
-- The library attempts alternative strategies (e.g., data‑attributes, class partial matches, aria‑labels)
-- If a working alternative is found, it is:
-  - Logged in the Cypress runner
-  - Stored in JSON (default: cypress/healed-selectors.json)
-  - Included in an HTML report after the run
+**Healing Priority (default order):**
+1. `data-cy` attributes
+2. `data-testid` attributes  
+3. `aria-label` attributes
+4. `role` attributes
+5. Text content
+6. Label associations
+7. Stable class names
+8. Non-dynamic IDs
+
+**Options:**
+- `priority`: string[] (customize heuristic order)
+- `excludePatterns`: string[] (regex patterns to exclude)
+- `logging`: boolean (enable/disable logs)
+- `maxTextLength`: number (max text length for text-based healing)
+- `minTextLength`: number (min text length for text-based healing)
+
+### cy.getLoc(selector, fallbackSelectors?)
+**Legacy command with manual fallback selectors**
+
+```javascript
+// Provide manual fallback selectors
+cy.getLoc('.primary', ['.secondary', '#fallback']).click();
+```
+
+---
+
+## Healing Strategies
+
+### 1. Heuristic Healing (Default)
+The package uses smart heuristics to find elements when selectors fail:
+
+```javascript
+// Example: If '.submit-btn' fails, it tries:
+// 1. [data-cy="submit"] or [data-testid="submit"]
+// 2. [aria-label="Submit"]
+// 3. [role="button"]:contains("Submit")
+// 4. button:contains("Submit")
+// 5. .submit, .btn-submit (stable classes)
+// 6. #submit (if ID is stable)
+```
+
+### 2. AI Healing (Optional)
+When configured with API keys, the package can use AI providers:
+
+- **OpenAI GPT-4**: Advanced selector generation
+- **Google Gemini**: Fast and efficient healing
+- **GitHub Copilot**: IDE-integrated suggestions (default)
+- **Cursor**: Context-aware healing
+- **Warp**: Terminal-integrated healing
+
+### 3. Manual Healing
+Provide manual selector mappings in `cypress/manual-healing.json`:
+
+```json
+{
+  ".old-button": "[data-cy='new-button']",
+  "#legacy-id": "[aria-label='Submit form']"
+}
+```
+
+---
+
+## AI Configuration
+
+To enable AI-powered healing, configure your providers in `src/config/healing.config.json`:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "openai",
+    "providers": {
+      "openai": {
+        "apiKey": "YOUR_OPENAI_API_KEY",
+        "model": "gpt-4",
+        "temperature": 0.2
+      },
+      "gemini": {
+        "apiKey": "YOUR_GEMINI_API_KEY",
+        "model": "gemini-pro"
+      },
+      "copilot": {
+        "endpoint": "YOUR_COPILOT_ENDPOINT",
+        "apiKey": "YOUR_COPILOT_KEY"
+      }
+    }
+  },
+  "heuristics": {
+    "priority": ["data-cy", "data-testid", "aria-label", "role", "text", "label", "class", "id"],
+    "excludePatterns": ["^ember-", "^react-", "^ng-", "^[0-9]+$"],
+    "enableLogging": true,
+    "maxTextLength": 50,
+    "minTextLength": 1
+  },
+  "healing": {
+    "maxAttempts": 3,
+    "timeout": 2000,
+    "saveHealed": true,
+    "healedSelectorsFile": "cypress/healed-selectors.json",
+    "reportFile": "cypress/healing-report.html",
+    "autoHeal": true
+  }
+}
+```
+
+**Note:** AI features require valid API keys. The heuristic healing works without any API configuration.
 
 ---
 
 ## Reporting
-- Healed selectors JSON: cypress/healed-selectors.json
-- Healing report HTML: cypress/healing-report.html
+
+### Enhanced HTML Report
+After test runs, an HTML report is generated showing:
+- Total number of healed selectors
+- Breakdown by healing method (heuristic, AI, manual)
+- Original vs healed selectors
+- Timestamps and statistics
+
+**Default locations:**
+- JSON data: `cypress/healed-selectors.json`
+- HTML report: `cypress/healing-report.html`
+
+### Programmatic Access
+Access healing data in your tests:
+
+```javascript
+// Generate report on demand
+cy.task('generateHealingReport');
+
+// Get all healed selectors
+cy.task('getHealedSelectors').then((selectors) => {
+  console.log('Healed:', selectors);
+});
+
+// Clear healing history
+cy.task('clearHealedSelectors');
+```
+
+---
+
+## Migration Guide
+
+### Migrating from v0.1.x to v0.2.0
+
+#### 1. Update `waitFor` to `smartWait`
+```javascript
+// Old (may conflict with Cypress 14+)
+cy.waitFor('.element');
+cy.waitFor('@api');
+cy.waitFor(1000);
+
+// New (no conflicts)
+cy.smartWait('.element');
+cy.smartWait('@api');
+cy.smartWait(1000);
+```
+
+#### 2. Use new auto-healing
+```javascript
+// Old manual approach
+cy.getLoc('.primary', ['.fallback1', '.fallback2']);
+
+// New auto-healing approach
+cy.smartGet('.primary'); // Automatically finds best selector
+```
+
+#### 3. Update plugin registration
+```javascript
+// Old
+const healingPlugin = require('cypress-healing/plugin');
+
+// New
+const { registerHealingPlugin } = require('cypress-healing');
+```
+
+---
 
 ### Reporter compatibility
 No special integration is required for popular reporters—the library uses standard `cy.log()` messages during waits and healing, and writes to stdout when generating the HTML report. When you enable a reporter, these messages show up in the reporter output:
@@ -240,61 +440,153 @@ Example JSON entry:
 
 ---
 
-## Configuration (advanced)
-At runtime, configuration is read from `Cypress.env('healingConfig')`.
-
-Supported options:
-- healFile: string – path to the healed selectors JSON file
-- reportFile: string – path to the generated HTML report
-- strategies: function[] – custom healing functions of the form `(selector) => newSelector | selector`
-
-Example:
-
-```js path=null start=null
-// cypress.config.js
-config.env.healingConfig = {
-  healFile: 'cypress/custom/healed.json',
-  reportFile: 'cypress/custom/report.html',
-  strategies: [
-    // Prefer data-test over id
-    (sel) => sel.startsWith('#') ? `[data-test='${sel.slice(1)}']` : sel,
-    // Loosen strict class selectors
-    (sel) => sel.includes('.')
-      ? sel
-          .split('.')
-          .filter(Boolean)
-          .map((part, i) => i === 0 && !part.startsWith('[') ? part : `[class*='${part}']`)
-          .join('')
-      : sel,
-  ],
-};
-```
-
----
-
 ## TypeScript
-Types for the custom commands are included. After importing `cypress-healing/commands`, you can use the commands with type support.
 
-```ts path=null start=null
+Full TypeScript support with type definitions included:
+
+```typescript
 // cypress/support/e2e.ts
-import 'cypress-healing/commands';
+import 'cypress-healing';
 
-// Example usage with IntelliSense
-yourTest(() => {
-  cy.getLoc('#submit').click();
-  cy.waitFor('@getUser', { timeout: 15000 });
-});
+// Use with full IntelliSense
+cy.smartWait('@api');
+cy.smartGet('.button').click();
+
+// Import types for custom usage
+import { healSelector, HealOptions } from 'cypress-healing';
+
+const options: HealOptions = {
+  priority: ['data-cy', 'aria-label'],
+  logging: true
+};
+
+// Use in custom commands
+const healed = healSelector('.old-selector', document, options);
 ```
 
-If your editor does not pick up the types automatically, add `cypress-healing` to `compilerOptions.types` in your tsconfig used by Cypress:
-
-```json path=null start=null
+**tsconfig.json:**
+```json
 {
   "compilerOptions": {
     "types": ["cypress", "cypress-healing"]
   }
 }
 ```
+
+---
+
+## Examples
+
+### Basic Test with Auto-Healing
+```javascript
+describe('Login Flow', () => {
+  it('should login with auto-healing', () => {
+    cy.visit('/login');
+    
+    // These selectors will auto-heal if they break
+    cy.smartGet('#username').type('user@example.com');
+    cy.smartGet('#password').type('password123');
+    cy.smartGet('.login-button').click();
+    
+    // Wait for login to complete
+    cy.smartWait('@loginAPI');
+    cy.smartWait('.loading', { action: 'disappear' });
+    
+    // Verify success
+    cy.smartGet('[data-cy=dashboard]').should('be.visible');
+  });
+});
+```
+
+### Custom Healing Configuration
+```javascript
+// Use custom healing options for specific elements
+cy.smartGet('.dynamic-element', {
+  priority: ['text', 'aria-label'], // Try text first
+  excludePatterns: ['^temp-', '^id-\\d+$'], // Exclude temporary classes
+  maxTextLength: 30 // Limit text matching
+}).click();
+```
+
+---
+
+## Best Practices
+
+### 1. Use Stable Selectors
+```javascript
+// BEST: data-cy attributes
+cy.smartGet('[data-cy=submit]');
+
+// GOOD: data-testid
+cy.smartGet('[data-testid=user-form]');
+
+// GOOD: aria-label (also helps accessibility)
+cy.smartGet('[aria-label="Close dialog"]');
+
+// AVOID: Dynamic IDs and classes
+cy.smartGet('#user-123456'); // Will need healing
+```
+
+### 2. Configure Exclusion Patterns
+Add patterns for dynamic content in your config:
+```json
+{
+  "heuristics": {
+    "excludePatterns": [
+      "^ember-",      // Ember.js IDs
+      "^react-",      // React IDs
+      "^ng-",         // Angular IDs
+      "^vue-",        // Vue.js IDs
+      "^[0-9]+$",     // Pure numeric IDs
+      "^temp-",       // Temporary classes
+      "[0-9]{13}"     // Timestamps
+    ]
+  }
+}
+```
+
+### 3. Review Healing Reports
+- Check `cypress/healing-report.html` after test runs
+- Update tests with healed selectors when patterns emerge
+- Use reports to identify unstable selectors in your app
+
+### 4. Combine with Page Objects
+```javascript
+class LoginPage {
+  get username() { return cy.smartGet('[data-cy=username]'); }
+  get password() { return cy.smartGet('[data-cy=password]'); }
+  get submitBtn() { return cy.smartGet('[data-cy=login-submit]'); }
+  
+  login(email, password) {
+    this.username.type(email);
+    this.password.type(password);
+    this.submitBtn.click();
+    cy.smartWait('@loginAPI');
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Selectors Not Healing
+1. Check if element exists in DOM
+2. Verify configuration file is loaded
+3. Check console for healing attempts
+4. Ensure heuristics match your app's patterns
+
+### AI Healing Not Working
+1. Verify API keys in config
+2. Check network connectivity  
+3. Ensure AI provider is enabled
+4. Review console for API errors
+
+### Build Issues
+1. Run `npm install` to get dependencies
+2. Run `npm run build` to compile TypeScript
+3. Check that `dist/` folder exists
+4. Verify TypeScript version compatibility
 
 ---
 ## License
