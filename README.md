@@ -65,31 +65,14 @@ yarn add --dev cypress-healing
 
 ## Quick Start
 
-### 1) Configure the plugin (cypress.config.js)
-Register the plugin for enhanced healing capabilities and reporting.
-
-```javascript
-const { defineConfig } = require('cypress');
-const { registerHealingPlugin } = require('cypress-healing');
-
-module.exports = defineConfig({
-  e2e: {
-    setupNodeEvents(on, config) {
-      // Register the healing plugin with enhanced features
-      return registerHealingPlugin(on, config);
-    },
-  },
-});
-```
-
-### 2) Register commands (cypress/support/e2e.js)
+### 1) Register commands (cypress/support/e2e.js)
 
 ```javascript
 // cypress/support/e2e.js or e2e.ts
 import 'cypress-healing';
 ```
 
-### 3) Configure healing strategies (optional)
+### 2) Configure healing strategies (optional)
 
 Create `src/config/healing.config.json` for advanced configuration:
 
@@ -346,7 +329,6 @@ No special integration is required for popular reporters—the library uses stan
 ```js path=null start=null
 // cypress.config.js
 const { defineConfig } = require('cypress');
-const healingPlugin = require('cypress-healing/plugin');
 const mochawesome = require('cypress-mochawesome-reporter/plugin');
 
 module.exports = defineConfig({
@@ -362,7 +344,6 @@ module.exports = defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
       mochawesome(on);
-      healingPlugin(on, config);
       return config;
     },
   },
@@ -380,14 +361,12 @@ import 'cypress-healing/commands';
 ```js path=null start=null
 // cypress.config.js
 const { defineConfig } = require('cypress');
-const healingPlugin = require('cypress-healing/plugin');
 const allureWriter = require('@shelex/cypress-allure-plugin/writer');
 
 module.exports = defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
       allureWriter(on, config);
-      healingPlugin(on, config);
       return config;
     },
     env: { allure: true },
