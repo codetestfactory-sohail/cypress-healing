@@ -1,14 +1,12 @@
 {
   "name": "cypress-healing",
-  "version": "0.1.1",
-  "description": "Self-healing locators and smart waits for Cypress",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "version": "0.2.1",
+  "description": "AI-powered self-healing locators and smart waits for Cypress",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "license": "MIT",
   "files": [
-    "index.js",
-    "src",
-    "index.d.ts",
+    "dist",
     "README.md",
     "LICENSE"
   ],
@@ -16,7 +14,10 @@
     "access": "public"
   },
   "scripts": {
-    "test": "echo \"(add tests)\" && exit 0"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"(add tests)\" && exit 0",
+    "prepublishOnly": "npm run build"
   },
   "author": "Sohail Mohammed (sohailcode.com)",
   "keywords": [
@@ -26,6 +27,21 @@
     "selectors",
     "locators",
     "testing",
-    "automation"
-  ]
+    "automation",
+    "ai",
+    "openai",
+    "gemini"
+  ],
+  "peerDependencies": {
+    "cypress": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "cypress": "^13.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.0.0",
+    "@google/generative-ai": "^0.1.0"
+  }
 }
